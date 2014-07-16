@@ -50,7 +50,7 @@ if (eval "defined(&map_with_$algo)") {
 sub generate_dir_name {
     my ($algo, $ref, $reads) = @_;
     $ref   =~ s|.*/||; $ref   =~ s/\.(fasta|fna|fa)//;
-    $reads =~ s|.*/||; $reads =~ s/\.(fastq|fq)//; $reads =~ s/_(1|2)//;
+    $reads =~ s|.*/||; $reads =~ s/\.(fastq|fq).*//; $reads =~ s/_(1|2)//;
     return "$ref\_$reads\_$algo";
 }
 
