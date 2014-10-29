@@ -1,0 +1,220 @@
+#! /usr/bin/env perl
+
+use strict;
+use Carp;
+use Getopt::Long;
+Getopt::Long::Configure("pass_through");
+
+my $usage = "Usage: $0 --query protein.fasta --db diamond-db --out hits [other diamond options] \n\n";
+
+my ($help, $queryF, @args);
+
+GetOptions("h|help"    => \$help,
+           "q|query=s" => \$queryF,
+           '<>'        => \&keep_args
+	  ) or die("Error in command line arguments\n");
+
+$queryF && !$help or die $usage."Type diamond -h for more usage.\n\n";
+-s $queryF or die "Query file not found or empty: $queryF\n\n";
+
+my $amino_acid_codons_DNA = amino_acid_codons_DNA_table();
+
+my $protF = faa_to_fna($queryF);
+
+my @cmd = ('diamond', 'blastx', @args, '--query', $protF);
+print join(" ", @cmd) . "\n";
+run(@cmd);
+
+# unlink $protF if -e $protF;
+
+sub test {
+    my $aa = 'MEKTYNPQDIEQPLYEHWEKQGYFKPNGDESQESFCIMIPPPNVTGSLHMGHAFQQTIMD';
+    my $nt = reverse_translate($aa);
+    print "$aa\n  =>\n$nt\n";
+}
+
+sub keep_args {
+    push @args, $_[0];
+}
+
+sub faa_to_fna {
+    my ($faa) = @_;
+    my $fna = "$faa.pseudo.tmp.fna";
+    my @seq = read_fasta($faa);
+    @seq = map { [ $_->[0], $_->[1], reverse_translate($_->[2]) ] } @seq;
+    write_fasta($fna, \@seq);
+    return $fna;
+}
+
+sub reverse_translate {
+    my ($aa) = @_;
+    my $nt = join('', map { $amino_acid_codons_DNA->{$_}->[0] } split(//, $aa));
+}
+
+sub run { system(@_) == 0 or confess("FAILED: ". join(" ", @_)); }
+
+
+
+# Routines from Gary Olsen's gjoseqlib.pm module
+
+sub amino_acid_codons_DNA_table {
+    my $amino_acid_codons_DNA = {
+         L  => [ qw( TTA TTG CTA CTG CTT CTC ) ],
+         R  => [ qw( AGA AGG CGA CGG CGT CGC ) ],
+         S  => [ qw( AGT AGC TCA TCG TCT TCC ) ],
+         A  => [ qw( GCA GCG GCT GCC ) ],
+         G  => [ qw( GGA GGG GGT GGC ) ],
+         P  => [ qw( CCA CCG CCT CCC ) ],
+         T  => [ qw( ACA ACG ACT ACC ) ],
+         V  => [ qw( GTA GTG GTT GTC ) ],
+         I  => [ qw( ATA ATT ATC ) ],
+         C  => [ qw( TGT TGC ) ],
+         D  => [ qw( GAT GAC ) ],
+         E  => [ qw( GAA GAG ) ],
+         F  => [ qw( TTT TTC ) ],
+         H  => [ qw( CAT CAC ) ],
+         K  => [ qw( AAA AAG ) ],
+         N  => [ qw( AAT AAC ) ],
+         Q  => [ qw( CAA CAG ) ],
+         Y  => [ qw( TAT TAC ) ],
+         M  => [ qw( ATG ) ],
+         U  => [ qw( TGA ) ],
+         W  => [ qw( TGG ) ],
+
+         l  => [ qw( tta ttg cta ctg ctt ctc ) ],
+         r  => [ qw( aga agg cga cgg cgt cgc ) ],
+         s  => [ qw( agt agc tca tcg tct tcc ) ],
+         a  => [ qw( gca gcg gct gcc ) ],
+         g  => [ qw( gga ggg ggt ggc ) ],
+         p  => [ qw( cca ccg cct ccc ) ],
+         t  => [ qw( aca acg act acc ) ],
+         v  => [ qw( gta gtg gtt gtc ) ],
+         i  => [ qw( ata att atc ) ],
+         c  => [ qw( tgt tgc ) ],
+         d  => [ qw( gat gac ) ],
+         e  => [ qw( gaa gag ) ],
+         f  => [ qw( ttt ttc ) ],
+         h  => [ qw( cat cac ) ],
+         k  => [ qw( aaa aag ) ],
+         n  => [ qw( aat aac ) ],
+         q  => [ qw( caa cag ) ],
+         y  => [ qw( tat tac ) ],
+         m  => [ qw( atg ) ],
+         u  => [ qw( tga ) ],
+         w  => [ qw( tgg ) ],
+
+        '*' => [ qw( TAA TAG TGA ) ]
+    };
+}
+
+sub read_fasta
+{
+    my $dataR = ( $_[0] && ref $_[0] eq 'SCALAR' ) ?  $_[0] : slurp( @_ );
+    $dataR && $$dataR or return wantarray ? () : [];
+
+    my $is_fasta = $$dataR =~ m/^[\s\r]*>/;
+    my @seqs = map { $_->[2] =~ tr/ \n\r\t//d; $_ }
+               map { /^(\S+)([ \t]+([^\n\r]+)?)?[\n\r]+(.*)$/s ? [ $1, $3 || '', $4 || '' ] : () }
+               split /[\n\r]+>[ \t]*/m, $$dataR;
+
+    #  Fix the first sequence, if necessary
+    if ( @seqs )
+    {
+        if ( $is_fasta )
+        {
+            $seqs[0]->[0] =~ s/^>//;  # remove > if present
+        }
+        elsif ( @seqs == 1 )
+        {
+            $seqs[0]->[1] =~ s/\s+//g;
+            @{ $seqs[0] } = ( 'raw_seq', '', join( '', @{$seqs[0]} ) );
+        }
+        else  #  First sequence is not fasta, but others are!  Throw it away.
+        {
+            shift @seqs;
+        }
+    }
+
+    wantarray() ? @seqs : \@seqs;
+}
+
+sub slurp
+{
+    my ( $fh, $close );
+    if ( $_[0] && ref $_[0] eq 'GLOB' )
+    {
+        $fh = shift;
+    }
+    elsif ( $_[0] && ! ref $_[0] )
+    {
+        my $file = shift;
+        if    ( -f $file                       ) { }
+        elsif (    $file =~ /^<(.*)$/ && -f $1 ) { $file = $1 }  # Explicit read
+        else                                     { return undef }
+        open( $fh, '<', $file ) or return undef;
+        $close = 1;
+    }
+    else
+    {
+        $fh = \*STDIN;
+        $close = 0;
+    }
+
+    my $out = '';
+    my $inc = 1048576;
+    my $end =       0;
+    my $read;
+    while ( $read = read( $fh, $out, $inc, $end ) ) { $end += $read }
+    close( $fh ) if $close;
+
+    \$out;
+}
+
+sub write_fasta
+{
+    my ( $fh, $close, $unused ) = output_filehandle( shift );
+    ( unshift @_, $unused ) if $unused;
+
+    ( ref( $_[0] ) eq "ARRAY" ) or confess "Bad sequence entry passed to print_alignment_as_fasta\n";
+
+    #  Expand the sequence entry list if necessary:
+
+    if ( ref( $_[0]->[0] ) eq "ARRAY" ) { @_ = @{ $_[0] } }
+
+    foreach my $seq_ptr ( @_ ) { print_seq_as_fasta( $fh, @$seq_ptr ) }
+
+    close( $fh ) if $close;
+}
+
+sub output_filehandle
+{
+    my $file = shift;
+
+    #  Null string or undef
+
+    return ( \*STDOUT, 0 ) if ( ! defined( $file ) || ( $file eq "" ) );
+
+    #  FILEHANDLE
+
+    return ( $file, 0 ) if ( ref( $file ) eq "GLOB" );
+
+    #  Some other kind of reference; return the unused value
+
+    return ( \*STDOUT, 0, $file ) if ref( $file );
+
+    #  File name
+
+    my $fh;
+    open( $fh, '>', $file ) || die "Could not open output $file\n";
+    return ( $fh, 1 );
+}
+
+sub print_seq_as_fasta
+{
+    my $fh = ( ref $_[0] eq 'GLOB' ) ? shift : \*STDOUT;
+    return if ( @_ < 2 ) || ( @_ > 3 ) || ! ( defined $_[0] && defined $_[-1] );
+    #  Print header line
+    print $fh  ( @_ == 3 && defined $_[1] && $_[1] =~ /\S/ ) ? ">$_[0] $_[1]\n" : ">$_[0]\n";
+    #  Print sequence, 60 chars per line
+    print $fh  join( "\n", $_[-1] =~ m/.{1,60}/g ), "\n";
+}
