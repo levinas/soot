@@ -25,7 +25,7 @@ my @cmd = ('diamond', 'blastx', @args, '--query', $protF);
 print join(" ", @cmd) . "\n";
 run(@cmd);
 
-# unlink $protF if -e $protF;
+unlink $protF if -e $protF;
 
 sub test {
     my $aa = 'MEKTYNPQDIEQPLYEHWEKQGYFKPNGDESQESFCIMIPPPNVTGSLHMGHAFQQTIMD';
