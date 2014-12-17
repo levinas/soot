@@ -15,7 +15,9 @@ usage:  $0 [ options ] < table-with-SRP-IDs > extended-table-with-SRR-info 2> id
 
 Options:
         -c int            - 1-based number of column that contains SRP or SRA ID
+        -d                - download reads into split FASTQ files
         -j                - output reads information in JSON
+        -m                - filter output with strict project ID matches
         -p                - output reads information in Assembly-RAST CLI parameters
 
 Examples: 
