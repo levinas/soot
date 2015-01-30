@@ -29,11 +29,14 @@ my $ref   = shift @ARGV;
 my $read1 = shift @ARGV;
 my $read2 = shift @ARGV;
 
+$ref && $read1 && $read2 or die $usage;
+
 $ref   = abs_path($ref);
 $read1 = abs_path($read1);
 $read2 = abs_path($read2);
 
 $nthread ||= 8;
+$memory  ||= '2G';
 $algo    ||= 'bwa_mem';
 $outdir  ||= generate_dir_name($algo, $ref, $read1);
 
@@ -43,7 +46,7 @@ if (eval "defined(&map_with_$algo)") {
     chdir($outdir);
     eval "&map_with_$algo";
     print $@ if $@;
-    call_variant_with_bcftools();
+    call_variant_with_bcftools() unless $@;
 } else {
     die "Mapping algorithm not defined: $algo\n";
 }
@@ -69,8 +72,11 @@ sub map_with_bwa_mem {
     -s "aln-pe.sam"     or run("bwa mem -t $nthread ref.fa read_1.fq read_2.fq > aln-pe.sam 2>mem.log");
     -s "aln-pe.bam"     or run("samtools view -@ $nthread -bS aln-pe.sam > aln-pe.bam");
     -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread aln-pe.bam aln.sorted");
-    -s "aln.derep"      or run("samtools rmdup aln.sorted.bam aln.derep");
-    -s "aln.bam"        or run("ln -s aln.derep.bam aln.bam");
+  # -s "aln.derep.bam"  or run("samtools rmdup aln.sorted.bam aln.derep.bam");  # rmdup broken in samtools v1.0 and v1.1
+  # -s "aln.bam"        or run("ln -s aln.derep.bam aln.bam");
+    -s "aln.bam"        or run("ln -s aln.sorted.bam aln.bam");
+    -s "depth"          or run("samtools depth aln.bam > depth");
+    -s "aln.stats"      or run("samtools stats aln.bam -c 1,5000,1 > stats");
     -s "mpileup"        or run("samtools mpileup -uf ref.fa aln.bam > mpileup");
 }
 
