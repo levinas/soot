@@ -76,7 +76,7 @@ sub map_with_bwa_mem {
   # -s "aln.bam"        or run("ln -s aln.derep.bam aln.bam");
     -s "aln.bam"        or run("ln -s aln.sorted.bam aln.bam");
     -s "depth"          or run("samtools depth aln.bam > depth");
-    -s "aln.stats"      or run("samtools stats aln.bam -c 1,5000,1 > stats");
+    -s "aln.stats"      or run("samtools stats aln.bam -c 1,8000,1 > stats");
     -s "mpileup"        or run("samtools mpileup -uf ref.fa aln.bam > mpileup");
 }
 
