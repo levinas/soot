@@ -59,6 +59,7 @@ sub generate_dir_name {
 }
 
 sub call_variant_with_bcftools {
+    -s "mpileup"        or run("samtools mpileup -uf ref.fa aln.bam > mpileup");
     -s "var.raw.vcf"    or run("cat mpileup| bcftools view -vcg - > var.raw.vcf");
     -s "var.count.all"  or run("grep -v '^#' var.raw.vcf |wc -l > var.count.all");
     -s "var.count"      or run("grep -v '^#' var.raw.vcf |cut -f4 |grep -v 'N' |wc -l > var.count");
@@ -71,6 +72,7 @@ sub map_with_bwa_mem {
     -s "ref.fa.bwt"     or run("bwa index ref.fa");
     -s "aln-pe.sam"     or run("bwa mem -t $nthread ref.fa read_1.fq read_2.fq > aln-pe.sam 2>mem.log");
     -s "aln-pe.bam"     or run("samtools view -@ $nthread -f 0x2 -bS aln-pe.sam > aln-pe.bam"); # keep only properly paired reads
+    -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln-pe.sam > unmapped.bam");
     -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread aln-pe.bam aln.sorted");
   # -s "aln.derep.bam"  or run("samtools rmdup aln.sorted.bam aln.derep.bam");  # rmdup broken in samtools v1.0 and v1.1
   # -s "aln.bam"        or run("ln -s aln.derep.bam aln.bam");
@@ -79,7 +81,6 @@ sub map_with_bwa_mem {
     -s "raw.flagstat"   or run("samtools flagstat aln-pe.sam > raw.flagstat");
     -s "flagstat"       or run("samtools flagstat aln.bam > flagstat");
     -s "stats"          or run("samtools stats aln.bam -c 1,8000,1 > stats");
-    -s "mpileup"        or run("samtools mpileup -uf ref.fa aln.bam > mpileup");
 }
 
 
