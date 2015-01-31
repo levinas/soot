@@ -14,7 +14,7 @@ usage: $0 [options] ref.fq reads_1.fq reads_2.fq
        -o dir           - output directory (D = ref_reads_[algo])
        -t int           - number of threads (D = 8)
        -m size          - max memory per thread; suffix K/M/G recognized (D = 2G)
-       --vc             - variant calling
+       --vc tool        - variant calling [samtools freebayes] (D = freebayes)
 
 End_of_Usage
 
@@ -25,7 +25,7 @@ GetOptions("h|help"        => \$help,
            "m|memory=s"    => \$memory,
            "o|outdir=s"    => \$outdir,
            "t|threads=i"   => \$nthread,
-           "vc"            => \$vc);
+           "vc|=s"         => \$vc);
 
 my $ref   = shift @ARGV;
 my $read1 = shift @ARGV;
@@ -40,6 +40,7 @@ $read2 = abs_path($read2);
 $nthread ||= 8;
 $memory  ||= '2G';
 $algo    ||= 'bwa_mem';
+$vc      ||= 'freebayes';
 $outdir  ||= generate_dir_name($algo, $ref, $read1);
 
 if (eval "defined(&map_with_$algo)") {
@@ -47,8 +48,15 @@ if (eval "defined(&map_with_$algo)") {
     run("mkdir -p $outdir");
     chdir($outdir);
     eval "&map_with_$algo";
-    print $@ if $@;
-    call_variant_with_bcftools() if $vc && !$@;
+    if ($@) {
+        print $@;
+    } else {
+        compute_stats();
+        if ($vc && eval "defined(&call_variant_with_$vc)") {
+            eval "&call_variant_with_$vc";
+            print $@ if $@;
+        }
+    }
 } else {
     die "Mapping algorithm not defined: $algo\n";
 }
@@ -60,11 +68,26 @@ sub generate_dir_name {
     return "$ref\_$reads\_$algo";
 }
 
-sub call_variant_with_bcftools {
+sub call_variant_with_samtools {
     -s "mpileup"        or run("samtools mpileup -6 -uf ref.fa aln.bam > mpileup");
-    -s "var.raw.vcf"    or run("bcftools call -vc mpileup > var.raw.vcf");
-    -s "var.count.all"  or run("grep -v '^#' var.raw.vcf |wc -l > var.count.all");
-    -s "var.count"      or run("grep -v '^#' var.raw.vcf |cut -f4 |grep -v 'N' |wc -l > var.count");
+    -s "var.sam.vcf"    or run("bcftools call -vc mpileup > var.sam.vcf");
+    -s "var.sam.count"  or run("grep -v '^#' var.sam.vcf |cut -f4 |grep -v 'N' |wc -l > var.sam.count");
+    run("ln -s -f var.sam.vcf var.vcf");
+}
+
+sub call_variant_with_freebayes {
+    -s "var.fb.vcf"     or run("freebayes-parallel <(fasta_generate_regions.py ref.fa.fai 100000) $nthread -f ref.fa aln.bam >var.fb.vcf");
+    -s "var.fb.count"   or run("grep -v '^#' var.fb.vcf |cut -f4 |grep -v 'N' |wc -l > var.fb.count");
+    run("ln -s -f var.sam.vcf var.vcf");
+}
+
+sub compute_stats {
+    -s "raw.flagstat"   or run("samtools flagstat aln-pe.sam > raw.flagstat");
+    -s "flagstat"       or run("samtools flagstat aln.bam > flagstat");
+    -s "stats"          or run("samtools stats aln.bam -c 1,8000,1 > stats");
+  # -s "depth"          or run("samtools depth aln.bam > depth");
+    -s "depth"          or run("bedtools genomecov -ibam aln.bam -d > depth");
+    -s "depth.hist"     or run("bedtools genomecov -ibam aln.bam > depth.hist");
 }
 
 sub map_with_bwa_mem {
@@ -79,10 +102,7 @@ sub map_with_bwa_mem {
   # -s "aln.dedup.bam"  or run("samtools rmdup aln.sorted.bam aln.dedup.bam");  # rmdup broken in samtools v1.0 and v1.1
   # -s "aln.bam"        or run("ln -s aln.dedup.bam aln.bam");
     -s "aln.bam"        or run("ln -s aln.sorted.bam aln.bam");
-    -s "depth"          or run("samtools depth aln.bam > depth");
-    -s "raw.flagstat"   or run("samtools flagstat aln-pe.sam > raw.flagstat");
-    -s "flagstat"       or run("samtools flagstat aln.bam > flagstat");
-    -s "stats"          or run("samtools stats aln.bam -c 1,8000,1 > stats");
+    -s "aln.bam.bai"    or run("samtools index aln.bam");
 }
 
 
