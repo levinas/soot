@@ -76,8 +76,8 @@ sub map_with_bwa_mem {
     -s "aln-pe.bam"     or run("samtools view -@ $nthread -f 0x2 -bS aln-pe.sam > aln-pe.bam"); # keep only properly paired reads
     -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln-pe.sam > unmapped.bam");
     -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread aln-pe.bam aln.sorted");
-  # -s "aln.derep.bam"  or run("samtools rmdup aln.sorted.bam aln.derep.bam");  # rmdup broken in samtools v1.0 and v1.1
-  # -s "aln.bam"        or run("ln -s aln.derep.bam aln.bam");
+  # -s "aln.dedup.bam"  or run("samtools rmdup aln.sorted.bam aln.dedup.bam");  # rmdup broken in samtools v1.0 and v1.1
+  # -s "aln.bam"        or run("ln -s aln.dedup.bam aln.bam");
     -s "aln.bam"        or run("ln -s aln.sorted.bam aln.bam");
     -s "depth"          or run("samtools depth aln.bam > depth");
     -s "raw.flagstat"   or run("samtools flagstat aln-pe.sam > raw.flagstat");
