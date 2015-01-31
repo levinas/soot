@@ -61,7 +61,7 @@ sub generate_dir_name {
 }
 
 sub call_variant_with_bcftools {
-    -s "mpileup"        or run("samtools mpileup -uf ref.fa aln.bam > mpileup");
+    -s "mpileup"        or run("samtools mpileup -6 -uf ref.fa aln.bam > mpileup");
     -s "var.raw.vcf"    or run("cat mpileup| bcftools view -vcg - > var.raw.vcf");
     -s "var.count.all"  or run("grep -v '^#' var.raw.vcf |wc -l > var.count.all");
     -s "var.count"      or run("grep -v '^#' var.raw.vcf |cut -f4 |grep -v 'N' |wc -l > var.count");
