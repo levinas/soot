@@ -14,16 +14,18 @@ usage: $0 [options] ref.fq reads_1.fq reads_2.fq
        -o dir           - output directory (D = ref_reads_[algo])
        -t int           - number of threads (D = 8)
        -m size          - max memory per thread; suffix K/M/G recognized (D = 2G)
+       --vc             - variant calling
 
 End_of_Usage
 
-my ($help, $algo, $memory, $nthread, $outdir);
+my ($help, $algo, $memory, $nthread, $outdir, $vc);
 
 GetOptions("h|help"        => \$help,
            "a|algo=s"      => \$algo,
            "m|memory=s"    => \$memory,
            "o|outdir=s"    => \$outdir,
-           "t|threads=i"   => \$nthread);
+           "t|threads=i"   => \$nthread,
+           "vc"            => \$vc);
 
 my $ref   = shift @ARGV;
 my $read1 = shift @ARGV;
@@ -46,7 +48,7 @@ if (eval "defined(&map_with_$algo)") {
     chdir($outdir);
     eval "&map_with_$algo";
     print $@ if $@;
-    call_variant_with_bcftools() unless $@;
+    call_variant_with_bcftools() if $vc && !$@;
 } else {
     die "Mapping algorithm not defined: $algo\n";
 }
