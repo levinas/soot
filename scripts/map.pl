@@ -76,9 +76,11 @@ sub call_variant_with_samtools {
 }
 
 sub call_variant_with_freebayes {
-    -s "var.fb.vcf"     or run("freebayes-parallel <(fasta_generate_regions.py ref.fa.fai 100000) $nthread -f ref.fa aln.bam >var.fb.vcf");
-    -s "var.fb.count"   or run("grep -v '^#' var.fb.vcf |cut -f4 |grep -v 'N' |wc -l > var.fb.count");
-    run("ln -s -f var.sam.vcf var.vcf");
+    # -s "var.fb.vcf"     or run("bash -c 'freebayes-parallel <(fasta_generate_regions.py ref.fa.fai 100000) $nthread -p 1 -f ref.fa aln.bam >var.fb.vcf'");
+    # -s "var.fb.count"   or run("grep -v '^#' var.fb.vcf |cut -f4 |grep -v 'N' |wc -l > var.fb.count");
+    run("bash -c 'freebayes-parallel <(fasta_generate_regions.py ref.fa.fai 100000) $nthread -p 1 -f ref.fa aln.bam >var.fb.vcf'");
+    run("grep -v '^#' var.fb.vcf |cut -f4 |grep -v 'N' |wc -l > var.fb.count");
+    run("ln -s -f var.fb.vcf var.vcf");
 }
 
 sub compute_stats {
