@@ -91,6 +91,7 @@ sub compute_consensus {
 }
 
 sub compute_stats {
+    -s "ref.fa.fai"     or run("samtools faidx ref.fa");
     -s "raw.flagstat"   or run("samtools flagstat aln-pe.sam > raw.flagstat");
     -s "flagstat"       or run("samtools flagstat aln.bam > flagstat");
     -s "stats"          or run("samtools stats aln.bam -c 1,8000,1 > stats");
