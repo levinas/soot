@@ -25,7 +25,7 @@ GetOptions("h|help"        => \$help,
            "m|memory=s"    => \$memory,
            "o|outdir=s"    => \$outdir,
            "t|threads=i"   => \$nthread,
-           "vc|=s"         => \$vc);
+           "vc=s"          => \$vc);
 
 my $ref   = shift @ARGV;
 my $read1 = shift @ARGV;
@@ -55,6 +55,7 @@ if (eval "defined(&map_with_$algo)") {
         if ($vc && eval "defined(&call_variant_with_$vc)") {
             eval "&call_variant_with_$vc";
             print $@ if $@;
+            compute_consensus() unless $@;
         }
     }
 } else {
@@ -77,8 +78,16 @@ sub call_variant_with_samtools {
 
 sub call_variant_with_freebayes {
     -s "var.fb.vcf"     or run("bash -c 'freebayes-parallel <(fasta_generate_regions.py ref.fa.fai 100000) $nthread -p 1 -f ref.fa aln.bam >var.fb.vcf'");
+    -s "var.fb.q10.vcf" or run("vcffilter -f 'QUAL > 10 & DP > 5' var.fb.vcf > var.fb.q10.vcf");
+    -s "var.fb.q1.vcf"  or run("vcffilter -f 'QUAL > 1' var.fb.vcf > var.fb.q1.vcf");
     -s "var.fb.count"   or run("grep -v '^#' var.fb.vcf |cut -f4 |grep -v 'N' |wc -l > var.fb.count");
-    run("ln -s -f var.fb.vcf var.vcf");
+    run("ln -s -f var.fb.q10.vcf var.vcf");
+}
+
+sub compute_consensus {
+    -s "var.vcf.gz"     or run("bgzip var.vcf");
+    -s "var.vcf.gz.tbi" or run("tabix var.vcf.gz");
+    -s "consensus"      or run("bcftools consensus -c chain -f ref.fa var.vcf.gz >consensus");
 }
 
 sub compute_stats {
@@ -88,6 +97,7 @@ sub compute_stats {
   # -s "depth"          or run("samtools depth aln.bam > depth");
     -s "depth"          or run("bedtools genomecov -ibam aln.bam -d > depth");
     -s "depth.hist"     or run("bedtools genomecov -ibam aln.bam > depth.hist");
+    -s "uncov.10"       or run("bedtools genomecov -ibam aln.bam -bga | perl -ne 'chomp; \@c=split/\t/; \$ln=\$c[2]-\$c[1]; print join(\"\\t\", \@c, \$ln).\"\\n\" if \$c[3]<10;' > uncov.10" );
 }
 
 sub map_with_bwa_mem {
