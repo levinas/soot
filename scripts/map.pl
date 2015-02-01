@@ -8,7 +8,7 @@ use Getopt::Long;
 
 my $usage = <<"End_of_Usage";
 
-usage: $0 [options] ref.fq reads_1.fq reads_2.fq
+usage: $0 [options] ref.fq reads_1.fq [reads_2.fq]
 
        -a algo          - alignment algorithm [bwa_mem bwa_sampe bowtie2 bbmap mosaik] (D = bwa_mem)
        -o dir           - output directory (D = ref_reads_[algo])
@@ -42,6 +42,11 @@ $memory  ||= '2G';
 $algo    ||= 'bwa_mem'; $algo .= "_se" if !$read2;
 $vc      ||= 'freebayes';
 $outdir  ||= generate_dir_name($algo, $ref, $read1);
+
+print "$read2\n";
+
+print "$algo\n";
+
 
 if (eval "defined(&map_with_$algo)") {
     print "> $outdir\n";
