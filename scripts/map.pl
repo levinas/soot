@@ -142,9 +142,9 @@ sub map_with_bwa_mem_strict {
     -s "read_1.fq"      or run("ln -s $read1 read_1.fq");
     -s "read_2.fq"      or run("ln -s $read2 read_2.fq");
     -s "ref.fa.bwt"     or run("bwa index ref.fa");
-    -s "aln-pe.sam"     or run("bwa mem -B9 -O16 -E1 -L10 -t $nthread ref.fa read_1.fq read_2.fq > aln-pe.sam 2>mem.log");
+    -s "aln-pe.sam"     or run("bwa mem -B9 -O16 -E1 -L5 -t $nthread ref.fa read_1.fq read_2.fq > aln-pe.sam 2>mem.log");
     -s "aln.raw.sam"    or run("ln -s aln-pe.sam aln.raw.sam");
-    -s "aln.keep.bam"   or run("samtools view -@ $nthread -f 0x2 -q 20 -bS aln.raw.sam > aln.keep.bam"); # keep only properly paired reads
+    -s "aln.keep.bam"   or run("samtools view -@ $nthread -f 0x2 -q 10 -bS aln.raw.sam > aln.keep.bam"); # keep only properly paired reads
     -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln.raw.sam > unmapped.bam");
     -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread aln.keep.bam aln.sorted");
   # -s "aln.dedup.bam"  or run("samtools rmdup aln.sorted.bam aln.dedup.bam");  # rmdup broken in samtools v1.0 and v1.1
@@ -157,9 +157,9 @@ sub map_with_bwa_mem_strict_se {
     -s "ref.fa"         or run("ln -s $ref ref.fa");
     -s "read.fq"        or run("ln -s $read1 read.fq");
     -s "ref.fa.bwt"     or run("bwa index ref.fa");
-    -s "aln-se.sam"     or run("bwa mem -B9 -O16 -E1 -L10 -t $nthread ref.fa read.fq > aln-se.sam 2>mem.log");
+    -s "aln-se.sam"     or run("bwa mem -B9 -O16 -E1 -L5 -t $nthread ref.fa read.fq > aln-se.sam 2>mem.log");
     -s "aln.raw.sam"    or run("ln -s aln-se.sam aln.raw.sam");
-    -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS -q 20 aln.raw.sam > aln.keep.bam");
+    -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS -q 10 aln.raw.sam > aln.keep.bam");
     -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln.raw.sam > unmapped.bam");
     -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread aln.keep.bam aln.sorted");
   # -s "aln.dedup.bam"  or run("samtools rmdup aln.sorted.bam aln.dedup.bam");  # rmdup broken in samtools v1.0 and v1.1
