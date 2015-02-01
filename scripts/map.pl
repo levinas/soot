@@ -31,15 +31,15 @@ my $ref   = shift @ARGV;
 my $read1 = shift @ARGV;
 my $read2 = shift @ARGV;
 
-$ref && $read1 && $read2 or die $usage;
+$ref && $read1 or die $usage;
 
 $ref   = abs_path($ref);
 $read1 = abs_path($read1);
-$read2 = abs_path($read2);
+$read2 = abs_path($read2) if $read2;
 
 $nthread ||= 8;
 $memory  ||= '2G';
-$algo    ||= 'bwa_mem';
+$algo    ||= 'bwa_mem'; $algo .= "_se" if !$read2;
 $vc      ||= 'freebayes';
 $outdir  ||= generate_dir_name($algo, $ref, $read1);
 
@@ -92,7 +92,7 @@ sub compute_consensus {
 
 sub compute_stats {
     -s "ref.fa.fai"     or run("samtools faidx ref.fa");
-    -s "raw.flagstat"   or run("samtools flagstat aln-pe.sam > raw.flagstat");
+    -s "raw.flagstat"   or run("samtools flagstat aln.raw.sam > raw.flagstat");
     -s "flagstat"       or run("samtools flagstat aln.bam > flagstat");
     -s "stats"          or run("samtools stats aln.bam -c 1,8000,1 > stats");
   # -s "depth"          or run("samtools depth aln.bam > depth");
@@ -107,9 +107,25 @@ sub map_with_bwa_mem {
     -s "read_2.fq"      or run("ln -s $read2 read_2.fq");
     -s "ref.fa.bwt"     or run("bwa index ref.fa");
     -s "aln-pe.sam"     or run("bwa mem -t $nthread ref.fa read_1.fq read_2.fq > aln-pe.sam 2>mem.log");
-    -s "aln-pe.bam"     or run("samtools view -@ $nthread -f 0x2 -bS aln-pe.sam > aln-pe.bam"); # keep only properly paired reads
-    -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln-pe.sam > unmapped.bam");
-    -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread aln-pe.bam aln.sorted");
+    -s "aln.raw.sam"    or run("ln -s aln-pe.sam aln.raw.sam");
+    -s "aln.keep.bam"   or run("samtools view -@ $nthread -f 0x2 -bS aln.raw.sam > aln.keep.bam"); # keep only properly paired reads
+    -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln.raw.sam > unmapped.bam");
+    -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread aln.keep.bam aln.sorted");
+  # -s "aln.dedup.bam"  or run("samtools rmdup aln.sorted.bam aln.dedup.bam");  # rmdup broken in samtools v1.0 and v1.1
+  # -s "aln.bam"        or run("ln -s aln.dedup.bam aln.bam");
+    -s "aln.bam"        or run("ln -s aln.sorted.bam aln.bam");
+    -s "aln.bam.bai"    or run("samtools index aln.bam");
+}
+
+sub map_with_bwa_mem_se {
+    -s "ref.fa"         or run("ln -s $ref ref.fa");
+    -s "read.fq"        or run("ln -s $read1 read.fq");
+    -s "ref.fa.bwt"     or run("bwa index ref.fa");
+    -s "aln-se.sam"     or run("bwa mem -t $nthread ref.fa read.fq > aln-se.sam 2>mem.log");
+    -s "aln.raw.sam"    or run("ln -s aln-se.sam aln.raw.sam");
+    -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS aln.raw.sam > aln.keep.bam");
+    -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln.raw.sam > unmapped.bam");
+    -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread aln.keep.bam aln.sorted");
   # -s "aln.dedup.bam"  or run("samtools rmdup aln.sorted.bam aln.dedup.bam");  # rmdup broken in samtools v1.0 and v1.1
   # -s "aln.bam"        or run("ln -s aln.dedup.bam aln.bam");
     -s "aln.bam"        or run("ln -s aln.sorted.bam aln.bam");
