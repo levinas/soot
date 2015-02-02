@@ -181,8 +181,7 @@ sub map_with_last {
     -s "ref.fa.fai"     or run("samtools faidx ref.fa");
     -s "sam.header"     or run("awk '{ print \"@SQ\\tSN:\"$1\"\\tLN:\"$2 }' ref.fa.fai |tee sam.header > aln.raw.sam");
     -s "aln.raw.sam"    or run("maf-convert sam aln-pe.maf >> aln.raw.sam");
-    # -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS aln.raw.sam > aln.keep.bam");
-    -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS cat.sam > aln.keep.bam");
+    -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS aln.raw.sam > aln.keep.bam");
     -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln.raw.sam > unmapped.bam");
     -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread aln.keep.bam aln.sorted");
   # -s "aln.dedup.bam"  or run("samtools rmdup aln.sorted.bam aln.dedup.bam");  # rmdup broken in samtools v1.0 and v1.1
