@@ -173,8 +173,8 @@ sub map_with_last {
     -s "read_1.fq"      or run("ln -s $read1 read_1.fq");
     -s "read_2.fq"      or run("ln -s $read2 read_2.fq");
     -s "ref"            or run("lastdb -m1111110 index ref.fa");
-    # -s "out1.maf"       or run("parallel-fastq -j $nthread 'lastal -Q1 -d108 -e120 -i1 index | last-split' < read_1.fq > out1.maf");
-    # -s "out2.maf"       or run("parallel-fastq -j $nthread 'lastal -Q1 -d108 -e120 -i1 index | last-split' < read_2.fq > out2.maf");
+    # -s "out1.maf"       or run("parallel-fastq -j $nthread -k 'lastal -Q1 -d108 -e120 -i1 index | last-split' < read_1.fq > out1.maf");
+    # -s "out2.maf"       or run("parallel-fastq -j $nthread -k 'lastal -Q1 -d108 -e120 -i1 index | last-split' < read_2.fq > out2.maf");
     -s "out1.maf"       or run("lastal -Q1 -d108 -e120 -i1 index read_1.fq > out1.maf");
     -s "out2.maf"       or run("lastal -Q1 -d108 -e120 -i1 index read_2.fq > out2.maf");
     -s "aln-pe.maf"     or run("last-pair-probs -m 0.1 out1.maf out2.maf > aln-pe.maf");
