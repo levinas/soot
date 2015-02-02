@@ -168,4 +168,25 @@ sub map_with_bwa_mem_strict_se {
     -s "aln.bam.bai"    or run("samtools index aln.bam");
 }
 
+sub map_with_last {
+    -s "ref.fa"         or run("ln -s $ref ref.fa");
+    -s "read_1.fq"      or run("ln -s $read1 read_1.fq");
+    -s "read_2.fq"      or run("ln -s $read2 read_2.fq");
+    -s "ref"            or run("lastdb -m1111110 index ref.fa");
+    # -s "out1.maf"       or run("parallel-fastq -j $nthread 'lastal -Q1 -d108 -e120 -i1 index | last-split' < read_1.fq > out1.maf");
+    # -s "out2.maf"       or run("parallel-fastq -j $nthread 'lastal -Q1 -d108 -e120 -i1 index | last-split' < read_2.fq > out2.maf");
+    -s "out1.maf"       or run("lastal -Q1 -d108 -e120 -i1 index read_1.fq > out1.maf");
+    -s "out2.maf"       or run("lastal -Q1 -d108 -e120 -i1 index read_2.fq > out2.maf");
+    -s "aln-pe.maf"     or run("last-pair-probs -m 0.1 out1.maf out2.maf > aln-pe.maf");
+    -s "aln.raw.sam"    or run("maf-convert sam aln-pe.maf > aln.raw.sam");
+    -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS aln.raw.sam > aln.keep.bam"); # keep only properly paired reads
+    -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln.raw.sam > unmapped.bam");
+    -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread aln.keep.bam aln.sorted");
+  # -s "aln.dedup.bam"  or run("samtools rmdup aln.sorted.bam aln.dedup.bam");  # rmdup broken in samtools v1.0 and v1.1
+  # -s "aln.bam"        or run("ln -s aln.dedup.bam aln.bam");
+    -s "aln.bam"        or run("ln -s aln.sorted.bam aln.bam");
+    -s "aln.bam.bai"    or run("samtools index aln.bam");
+    exit;
+}
+
 sub run { system($_[0]) == 0 or confess("FAILED: $_[0]"); }
