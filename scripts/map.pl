@@ -172,15 +172,15 @@ sub map_with_last {
     -s "ref.fa"         or run("ln -s $ref ref.fa");
     -s "read_1.fq"      or run("ln -s $read1 read_1.fq");
     -s "read_2.fq"      or run("ln -s $read2 read_2.fq");
-    -s "ref"            or run("lastdb -m1111110 index ref.fa");
+    -s "index.suf"      or run("lastdb -m1111110 index ref.fa");
     -s "out1.maf"       or run("parallel-fastq -j $nthread -k 'lastal -Q1 -d108 -e120 -i1 index' < read_1.fq > out1.maf");
     -s "out2.maf"       or run("parallel-fastq -j $nthread -k 'lastal -Q1 -d108 -e120 -i1 index' < read_2.fq > out2.maf");
-    # -s "out1.maf"       or run("lastal -Q1 -d108 -e120 -i1 index read_1.fq > out1.maf"); # sequential
-    # -s "out2.maf"       or run("lastal -Q1 -d108 -e120 -i1 index read_2.fq > out2.maf"); # sequential
+  # -s "out1.maf"       or run("lastal -Q1 -d108 -e120 -i1 index read_1.fq > out1.maf"); # sequential
+  # -s "out2.maf"       or run("lastal -Q1 -d108 -e120 -i1 index read_2.fq > out2.maf"); # sequential
     -s "aln-pe.maf"     or run("last-pair-probs -m 0.1 out1.maf out2.maf > aln-pe.maf");
     -s "ref.fa.fai"     or run("samtools faidx ref.fa");
-    -s "sam.header"     or run("awk '{ print \"@SQ\\tSN:\"$1\"\\tLN:\"$2 }' ref.fa.fai |tee sam.header > aln.raw.sam");
-    -s "aln.raw.sam"    or run("maf-convert sam aln-pe.maf >> aln.raw.sam");
+    -s "sam.header"     or run("awk '{ print \"\@SQ\\tSN:\"\$1\"\\tLN:\"\$2 }' ref.fa.fai >tee sam.header");
+    -s "aln.raw.sam"    or run("bash -c 'cat sam.header <(maf-convert sam aln-pe.maf) > aln.raw.sam'");
     -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS aln.raw.sam > aln.keep.bam");
     -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln.raw.sam > unmapped.bam");
     -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread aln.keep.bam aln.sorted");
