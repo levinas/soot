@@ -9,29 +9,32 @@ my $ref_file   = shift @ARGV;
 my $depth_file = shift @ARGV;
 
 my $gff = read_gff($ref_file);
-my @depth_list = map { chomp; [ split /\t/ ] } `cat $depth_file|head -n100`;
+my @depth_list = map { chomp; [ split /\t/ ] } `cat $depth_file`;
 # my $median_depth = median(map { $_->[2] } @depth_list);
 my $median_depth = 126;
 my $thresh = $median_depth / 10;
 
-
-my ($db1, $de1, $db2, $de2);
-my $p = 1;                      # position in gff
+my ($id1, $db1, $de1);
+my ($id2, $db2, $de2);
+my $p = 1;             # position in gff, skip first region which is the entire contig
 for (@depth_list) {
     my ($contig, $pos, $cov) = @$_;
+    next if $cov >= 2 * $thresh;
     my $np = next_pos($gff, $p);
     while ($np && $gff->[$np]->{end} <= $pos) {
         $p = $np;
         $np = next_pos($gff, $p);
     }
     last unless $np;
-    # print STDERR '$gff->[$p] = '. Dumper($gff->[$p]);
 
+    $id1 = $gff->[$p]->{attribute}->{ID};
     $db1 = $gff->[$p]->{start} - $pos;
     $de1 = $gff->[$p]->{end} - $pos;
+    $id2 = $gff->[$np]->{attribute}->{ID};
     $db2 = $gff->[$np]->{start} - $pos;
     $de2 = $gff->[$np]->{end} - $pos;
-    print join("\t", $contig, $pos, $cov, $db1, $de1, $db2, $de2) . "\n";
+
+    print join("\t", $contig, $pos, $cov, $id1, $db1, $de1, $id2, $db2, $de2) . "\n";
 }
 
 sub advance_gff {
