@@ -9,11 +9,42 @@ my $ref_file   = shift @ARGV;
 my $depth_file = shift @ARGV;
 
 my $gff = read_gff($ref_file);
-my @depth_list = map { chomp; [ split /\t/ ] } `cat $depth_file`;
-my $median_depth = median(map { $_->[2] } @depth_list);
+my @depth_list = map { chomp; [ split /\t/ ] } `cat $depth_file|head -n100`;
+# my $median_depth = median(map { $_->[2] } @depth_list);
+my $median_depth = 126;
+my $thresh = $median_depth / 10;
 
-print "$median_depth\n";
 
+my ($db1, $de1, $db2, $de2);
+my $p = 1;                      # position in gff
+for (@depth_list) {
+    my ($contig, $pos, $cov) = @$_;
+    my $np = next_pos($gff, $p);
+    while ($np && $gff->[$np]->{end} <= $pos) {
+        $p = $np;
+        $np = next_pos($gff, $p);
+    }
+    last unless $np;
+    # print STDERR '$gff->[$p] = '. Dumper($gff->[$p]);
+
+    $db1 = $gff->[$p]->{start} - $pos;
+    $de1 = $gff->[$p]->{end} - $pos;
+    $db2 = $gff->[$np]->{start} - $pos;
+    $de2 = $gff->[$np]->{end} - $pos;
+    print join("\t", $contig, $pos, $cov, $db1, $de1, $db2, $de2) . "\n";
+}
+
+sub advance_gff {
+    my ($gff, $pos) = @_;
+}
+
+sub next_pos {
+    my ($gff, $pos) = @_;
+    my $d = 1;
+    $d++ while $pos+$d < @$gff && $gff->[$pos+$d]->{attribute}->{Parent};
+    return undef if $pos+$d < @$gff && $gff->[$pos+$d]->{attribute}->{Parent};
+    return $pos+$d;
+}
 
 sub read_gff {
     my ($file) = @_;
@@ -24,7 +55,7 @@ sub read_gff {
         chomp;
         my ($seqname, $source, $feature, $start, $end, $score, $strand, $fname, $attribute) = split /\t/;
         my %hash = map { my ($k,$v) = split /=/; $k => $v } split(/;\s*/, $attribute);
-        push @features, [ seqname => $seqname,
+        push @features, { seqname => $seqname,
                           source => $source,
                           feature => $feature,
                           start => $start,
@@ -32,7 +63,7 @@ sub read_gff {
                           score => $end,
                           strand => $strand,
                           fname => $fname,
-                          attribute => \%hash ];
+                          attribute => \%hash };
     }
     return \@features;
 }
