@@ -10,8 +10,8 @@ my $depth_file = shift @ARGV;
 
 my $gff = read_gff($ref_file);
 my @depth_list = map { chomp; [ split /\t/ ] } `cat $depth_file`;
-# my $median_depth = median(map { $_->[2] } @depth_list);
-my $median_depth = 126;
+my $median_depth = median(map { $_->[2] } @depth_list);
+# my $median_depth = 126;
 my $thresh = $median_depth / 10;
 
 my ($id1, $db1, $de1);
