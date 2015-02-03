@@ -7,7 +7,7 @@ use File::Basename;
 use Getopt::Long;
 use Storable qw(nstore retrieve);
 use lib dirname (__FILE__);
-# use DT;
+use DT;
 
 my $usage = "Usage: $0 ref.fa ref.gff 1.vcf [2.vcf ...] > var.table\n\n";
 
@@ -37,11 +37,37 @@ $min_map_quality ||= 0;
 my $features = retrieve('features.store');
 # print STDERR '$features = '. Dumper($features);
 
+my @snps;
 for my $vcf (@vcf_files) {
     my $sample = $vcf; ($sample) = $sample =~ /(14\d\d)AK/;
-    my $snps = vcf_to_snps($vcf, $sample);
+    my $sample_snps = vcf_to_snps($vcf, $sample);
+    @snps = (@snps, @$sample_snps);
     # print STDERR '$snps = '. Dumper($snps);
+}
 
+if ($show_html) {
+    my @head = ('Sample', 'Contig', 'Pos', 'Ref', 'Var', 'Score', 'Var cov', 'Var frac',
+                'Type', 'Ref nt', 'Var nt', 'Ref aa', 'Var aa',
+                'Gene ID', 'Gene', 'Ref frame',
+                "Neighboring feature (3' end)",
+                "Neighboring feature (5' end)" );
+    my @rows;
+    for (@snps) {
+        # my $known = $known_snps{"$_->[0],$_->[1]"} and next;
+        my $minor = 1 if $_->[4] < 10 || $_->[5] < 5 || $_->[6] < 0.5;
+        my @c = map { DT::span_css($_, 'wrap') }
+                map { $minor ? DT::span_css($_, "opaque") : $_ }
+                map { ref $_ eq 'ARRAY' ? $_->[0] ? linked_gene(@$_) : undef : $_ } @$_;
+        push @rows, \@c;
+    }
+    DT::print_dynamic_table(\@head, \@rows, { title => 'SNPs', extra_css => extra_css() });
+} else {
+    for (@snps) {
+        # next if $known_snps{"$_->[0],$_->[1]"};
+        # my @c = map { ref $_ eq 'ARRAY' ? $_->[0] ? $_->[0] : undef : $_ } @$_;
+        my @c = map { ref $_ eq 'ARRAY' ? $_->[0] ? $_->[1] : undef : $_ } @$_;
+        print join("\t", @c) . "\n";
+    }
 }
 
 sub vcf_to_snps {
@@ -113,6 +139,7 @@ sub vcf_to_snps {
             # $func = "$gene_name, $func" if $gene_name;
         }
 
+        $ctg =~ s/1401AK_//;
         push @snps, [ $sample, $ctg, $pos, $ref, $alt, $score, $alt_dp, $alt_frac,
                       $type, $nt1, $nt2, $aa1, $aa2,
                       $locus, [ $gene->[0], $func ],
@@ -121,34 +148,9 @@ sub vcf_to_snps {
                       [ @{$hash->{right}}[0, 8] ]
                     ];
 
-        $ctg =~ s/_1401AK//;
         # print join("\t", $sample, $ctg, $pos, $ref, $alt, $score, $alt_dp, $alt_frac, $nt1, $nt2, $aa1, $aa2, $hash->{frameshift_region} ? 'frameshift' : undef) . "\n";
     }
     wantarray ? @snps : \@snps;
-}
-
-if ($show_html) {
-    my @head = ('Contig', 'Pos', 'Ref', 'Var', 'Var cov', 'Var frac',
-                'Type', 'Ref nt', 'Var nt', 'Ref aa', 'Var aa',
-                'Gene ID', 'Gene', 'Ref frame',
-                "Neighboring feature (3' end)",
-                "Neighboring feature (5' end)" );
-    my @rows;
-    for (@snps) {
-        # my $known = $known_snps{"$_->[0],$_->[1]"} and next;
-        my @c = map { DT::span_css($_, 'wrap') }
-                map { $known ? DT::span_css($_, "opaque") : $_ }
-                map { ref $_ eq 'ARRAY' ? $_->[0] ? add_link(@$_) : undef : $_ } @$_;
-        push @rows, \@c;
-    }
-    DT::print_dynamic_table(\@head, \@rows, { title => 'SNPs in BD vs CO92', extra_css => extra_css() });
-} else {
-    for (@snps) {
-        # next if $known_snps{"$_->[0],$_->[1]"};
-        # my @c = map { ref $_ eq 'ARRAY' ? $_->[0] ? $_->[0] : undef : $_ } @$_;
-        my @c = map { ref $_ eq 'ARRAY' ? $_->[0] ? $_->[1] : undef : $_ } @$_;
-        print join("\t", @c) . "\n";
-    }
 }
 
 sub extra_css {
@@ -168,6 +170,12 @@ sub add_link {
     my ($url, $txt) = @_;
     $txt ||= $url;
     return "<a href=$url>$txt</a>";
+}
+
+sub linked_gene {
+    my ($url, $txt) = @_;
+    $txt ||= $url;
+    return $txt;
 }
 
 sub read_var {
