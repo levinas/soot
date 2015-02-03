@@ -92,7 +92,7 @@ sub call_variant_with_freebayes {
 sub compute_consensus {
     -s "var.vcf.gz"     or run("bgzip -c var.vcf > var.vcf.gz");
     -s "var.vcf.gz.tbi" or run("tabix var.vcf.gz");
-    -s "chain"          or run("bcftools consensus -c chain -f ref.fa var.vcf.gz >consensus");
+    -s "consensus"      or run("bcftools consensus -c chain -f ref.fa var.vcf.gz >consensus");
 }
 
 sub compute_stats {
