@@ -38,7 +38,7 @@ $read1 = abs_path($read1);
 $read2 = abs_path($read2) if $read2;
 
 $nthread ||= 8;
-$memory  ||= '2G';
+$memory  ||= '2G'; $memory .= 'G' if $memory =~ /\d$/;
 $algo    ||= 'bwa_mem'; $algo .= "_se" if !$read2;
 $vc      ||= 'freebayes';
 $outdir  ||= generate_dir_name($algo, $ref, $read1);

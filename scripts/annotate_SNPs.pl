@@ -32,9 +32,9 @@ $min_alt_depth   ||= 5;
 $min_alt_fract   ||= 0;
 $min_map_quality ||= 0;
 
-# my $features = get_sorted_features($ref_fasta, $ref_gff);
+my $features = get_sorted_features($ref_fasta, $ref_gff);
 # nstore($features, 'features.store');
-my $features = retrieve('features.store');
+# my $features = retrieve('features.store');
 # print STDERR '$features = '. Dumper($features);
 
 my @snps;
@@ -54,7 +54,7 @@ if ($show_html) {
     my @rows;
     for (@snps) {
         # my $known = $known_snps{"$_->[0],$_->[1]"} and next;
-        my $minor = 1 if $_->[4] < 10 || $_->[5] < 5 || $_->[6] < 0.5;
+        my $minor = 1 if $_->[5] < 10 || $_->[6] < 5 || $_->[7] < 0.5;
         my @c = map { DT::span_css($_, 'wrap') }
                 map { $minor ? DT::span_css($_, "opaque") : $_ }
                 map { ref $_ eq 'ARRAY' ? $_->[0] ? linked_gene(@$_) : undef : $_ } @$_;
@@ -372,6 +372,7 @@ sub read_gff_tree {
     my %rootH;
     my @features;
     my $index;
+    shift @lines if $lines[0] =~ /region/;
     for (@lines) {
         chomp;
         my ($contig, $source, $feature, $start, $end, $score, $strand, $fname, $attribute) = split /\t/;
