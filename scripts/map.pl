@@ -10,7 +10,7 @@ my $usage = <<"End_of_Usage";
 
 usage: $0 [options] ref.fq reads_1.fq [reads_2.fq]
 
-       -a algo          - alignment algorithm [bwa_mem bwa_sampe bowtie2 bbmap mosaik] (D = bwa_mem)
+       -a algo          - alignment algorithm [bwa_mem bwa_sampe bowtie2 bbmap mosaik last] (D = bwa_mem)
        -o dir           - output directory (D = ref_reads_[algo])
        -t int           - number of threads (D = 8)
        -m size          - max memory per thread; suffix K/M/G recognized (D = 2G)
