@@ -18,12 +18,13 @@ usage: $0 [options] ref.fq reads_1.fq [reads_2.fq]
 
 End_of_Usage
 
-my ($help, $algo, $memory, $nthread, $outdir, $vc);
+my ($help, $algo, $memory, $nthread, $outdir, $paired, $vc);
 
 GetOptions("h|help"        => \$help,
            "a|algo=s"      => \$algo,
            "m|memory=s"    => \$memory,
            "o|outdir=s"    => \$outdir,
+           "p|paired"      => \$paired,
            "t|threads=i"   => \$nthread,
            "vc=s"          => \$vc);
 
@@ -36,6 +37,7 @@ $ref && $read1 or die $usage;
 $ref   = abs_path($ref);
 $read1 = abs_path($read1);
 $read2 = abs_path($read2) if $read2;
+$read2 = other_read_file_in_pair($read1) if $paired;
 
 $nthread ||= 8;
 $memory  ||= '2G'; $memory .= 'G' if $memory =~ /\d$/;
@@ -43,10 +45,8 @@ $algo    ||= 'bwa_mem'; $algo .= "_se" if !$read2;
 $vc      ||= 'freebayes';
 $outdir  ||= generate_dir_name($algo, $ref, $read1);
 
-print "$read2\n";
-
-print "$algo\n";
-
+print "READS = $read1 $read2\n";
+print "ALGO = $algo\n";
 
 if (eval "defined(&map_with_$algo)") {
     print "> $outdir\n";
@@ -72,6 +72,13 @@ sub generate_dir_name {
     $ref   =~ s|.*/||; $ref   =~ s/\.(fasta|fna|fa)//;
     $reads =~ s|.*/||; $reads =~ s/\.(fastq|fq).*//; $reads =~ s/_(1|2)//;
     return "$ref\_$reads\_$algo";
+}
+
+sub other_read_file_in_pair {
+    my ($r1) = @_;
+    my $r2 = $r1;
+    $r2 =~ s/R1\./R2\./;
+    return $r2 if -s $r2 && $r2 ne $r1;
 }
 
 sub call_variant_with_samtools {
