@@ -197,4 +197,23 @@ sub map_with_last {
     -s "aln.bam.bai"    or run("samtools index aln.bam");
 }
 
+sub map_with_last_se {
+    -s "ref.fa"         or run("ln -s $ref ref.fa");
+    -s "read_1.fq"      or run("ln -s $read1 read.fq");
+    -s "index.suf"      or run("lastdb -m1111110 index ref.fa");
+    -s "out.maf"        or run("parallel-fastq -j $nthread -k 'lastal -Q1 -d108 -e120 -i1 index' < read.fq > out.maf");
+  # -s "out.maf"        or run("lastal -Q1 -d108 -e120 -i1 index read.fq > out.maf"); # sequential
+    -s "aln-se.maf"     or run("ln -s out.maf aln-se.maf");
+    -s "ref.fa.fai"     or run("samtools faidx ref.fa");
+    -s "sam.header"     or run("awk '{ print \"\@SQ\\tSN:\"\$1\"\\tLN:\"\$2 }' ref.fa.fai > sam.header");
+    -s "aln.raw.sam"    or run("bash -c 'cat sam.header <(maf-convert sam aln-se.maf) > aln.raw.sam'");
+    -s "aln.keep.bam"   or run("samtools view -@ $nthread -bS aln.raw.sam > aln.keep.bam");
+    -s "unmapped.bam"   or run("samtools view -@ $nthread -f 4 -bS aln.raw.sam > unmapped.bam");
+    -s "aln.sorted.bam" or run("samtools sort -m $memory -@ $nthread aln.keep.bam aln.sorted");
+  # -s "aln.dedup.bam"  or run("samtools rmdup aln.sorted.bam aln.dedup.bam");  # rmdup broken in samtools v1.0 and v1.1
+  # -s "aln.bam"        or run("ln -s aln.dedup.bam aln.bam");
+    -s "aln.bam"        or run("ln -s aln.sorted.bam aln.bam");
+    -s "aln.bam.bai"    or run("samtools index aln.bam");
+}
+
 sub run { system($_[0]) == 0 or confess("FAILED: $_[0]"); }

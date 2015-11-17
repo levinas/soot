@@ -202,7 +202,7 @@ sub get_sorted_features {
         my $end    = $_->{end};
         my $strand = $_->{strand};
         my $length = $_->{length};
-        my $func   = $_->{attribute}->{Name};
+        my $func   = $_->{attribute}->{Name} || $_->{attribute}->{product};
         my $locus  = $_->{attribute}->{locus_tag};
         my $alias  = { LocusTag => $locus, GENE => $_->{attribute}->{Name} };
         my $desc   = $_->{descendants}->[0];
