@@ -39,7 +39,7 @@ my $features = get_sorted_features($ref_fasta, $ref_gff);
 
 my @snps;
 for my $vcf (@vcf_files) {
-    my $sample = $vcf; ($sample) = $sample =~ /(14\d\d)AK/;
+    my $sample = $vcf; ($sample) = $sample =~ /([0-9_]+)/;
     my $sample_snps = vcf_to_snps($vcf, $sample);
     @snps = (@snps, @$sample_snps);
     # print STDERR '$snps = '. Dumper($snps);
